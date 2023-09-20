@@ -1,13 +1,6 @@
 """
-Some code for sanity checking template
+Main file for everything - importing first 
 """
+import lib
 
-def sanity_add(x, y):
-    return x + y
-
-if __name__ == '__main__':
-    a = 1
-    b = 2
-
-    print(sanity_add(a, b))
-  
+spotify = reader("spotify.csv")
