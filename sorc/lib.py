@@ -40,7 +40,7 @@ def viz(column_name, data):
     value_counts = data[column_name].value_counts()
     print (value_counts)
     top_10_value_counts = value_counts.head(10)
-    fig = plt.figure(figsize=(20, 12))
+    fig = plt.figure(figsize=(10, 6))
     fig = plt.bar(top_10_value_counts.index, top_10_value_counts.values)
     # Add labels and a title to the plot
     fig = plt.xlabel("Top Artists")
