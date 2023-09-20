@@ -17,7 +17,7 @@ jobs:
       - name: test
         run: make test
       - name: Run main script
-        run: python src/script_descriptive_stats.py
+        run: python sorc/script_descriptive_stats.py
 
       - name: List files
         run: |
