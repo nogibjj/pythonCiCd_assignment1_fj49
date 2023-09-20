@@ -10,7 +10,7 @@ def reader(file_name):
     return data
 
 # basic stats
-def mean(column_name, data):
+def mean(column_name:str, data):
     """Calculates the mean"""
     mean_duration = int(data[column_name].mean())
     return mean_duration
@@ -37,7 +37,8 @@ def std(column_name, data):
 # making a plot
 def viz(column_name, data):
     """Creates visualization of the top 10 artists on spotify"""
-    value_counts = column_name[data].value_counts()
+    value_counts = data[column_name].value_counts()
+    print (value_counts)
     top_10_value_counts = value_counts.head(10)
     fig = plt.figure(figsize=(20, 12))
     fig = plt.bar(top_10_value_counts.index, top_10_value_counts.values)
@@ -46,4 +47,6 @@ def viz(column_name, data):
     fig = plt.ylabel("Number of top tracks")
     fig = plt.title("Which artists had the most top tracks in the last few years?")
     #plt.show()
+    plt.savefig("/workspaces/pythonCiCd_assignment1_fj49/output/visualization.png")
     return fig
+
