@@ -1,30 +1,46 @@
-# python-template-ids706
+# Individual Assignment 1: Continuous integration and deployment of python descriptive statistics using pandas [Making use of github actions]
+
+Made by: [Faraz Jawed](https://github.com/farazjawedd)
+
+[![Format](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/format.yml/badge.svg)](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/format.yml)
+[![Lint](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/lint.yml/badge.svg)](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/lint.yml)
+[![OnInstall](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/install.yml/badge.svg)](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/install.yml)
+[![Test](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/test.yml/badge.svg)](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/test.yml)
+
+# Summary of the project: 
+The workflow involes linting, formatting, testing and downloading all the dependencies required for the project. It's automatically handled by github actions whenever there is a new commit pushed to the repository, to make sure everything works. The badges at the top show the status of the project. 
+
+# Spotify Data Analysis
+
+This Python project analyzes data from the Spotify API, which is stored in a CSV file named `spotify.csv`. It provides insights into song lengths and identifies the top 10 artists with the most chart-topping hits between 2010 and 2022.
+
+## Features
+
+Descriptive statistics on song lengths (in milliseconds) to showcase the variation:
+
+- `Mean = 226033`
+- `Median = 221653`
+- `Mode = 236133`
+- `Std = 42063`
+
+Visualization of the top 10 artists with the most chart-topping hits.
+
+Here is the visualization (also gets saved in the output folder as a png file after deployment is complete):
+
+<img width="1580" alt="Screenshot 2023-09-10 at 7 11 13 PM" src="https://github.com/nogibjj/fj49_week2_ds/assets/101464414/cfc958df-4041-4c8f-be86-ab6885a69074">
 
 
-[![CI](https://github.com/farazjawedd/python-template-ids706/actions/workflows/cicd.yml/badge.svg)](https://github.com/farazjawedd/python-template-ids706/actions/workflows/cicd.yml)
 
-A python template with CI/CD setup to automate my workflow for other assignments in the course. Feel free to use it!
 
-This Python template provides a structured starting point for your Python projects. It includes the following components:
+## CI/CD Integration
 
-- Dockerfile for containerization
-- .devcontainer.json for Visual Studio Code development containers
-- Makefile for common project tasks
-- requirements.txt for managing dependencies
-- main.py for your project code
-- test_main.py for testing your code
+This repository is integrated with a CI/CD template for automatic deployment of Python projects within a virtual environment. 
 
-## Getting Started
+You can find the template [here] (https://github.com/farazjawedd/python-template-ids706). Feel free to use the template for other projects!
 
-1. Clone this repository to your local machine.
-2. Install Python 3.x on your system.
-3. (Optional) Install Docker for containerization.
-4. (Optional) Install Visual Studio Code with the "Remote - Containers" extension.
+## Development Environment
 
-## Usage
+- The repository includes a `.devcontainer` folder with configurations for the VS Code remote container development environment.
+- The `.github/workflows/cicd.yml` file defines the Continuous Integration (CI) workflow using GitHub Actions.
 
-- Run your project's `main.py` script using Python.
-- Test your code with the provided `test_main.py` script.
-- Use the Makefile commands for common tasks, e.g., `make install-dependencies`, `make run`, `make test`.
-
-- This also includes a docker container for running your scripts on a virtual envt. 
+Explore the code and data to gain insights into the world of music with Spotify! 
