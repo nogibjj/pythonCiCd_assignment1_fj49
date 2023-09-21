@@ -24,7 +24,7 @@ def median(column_name, data):
 
 def mode(column_name, data):
     """"Calculates the mode"""
-    mode_duration = int(data[column_name].mode())
+    mode_duration = int(data[column_name].mode().iloc[0])
     return mode_duration
 
 

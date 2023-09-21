@@ -11,3 +11,4 @@ mode = lib.mode("duration_ms", spotify)
 std = lib.std("duration_ms", spotify)
 viz = lib.viz("artist_name", spotify) # creates visualization
 
+print (mode)
