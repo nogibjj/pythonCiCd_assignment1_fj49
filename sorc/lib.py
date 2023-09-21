@@ -35,7 +35,7 @@ def std(column_name, data):
 
 
 # making a plot
-def viz(column_name, data):
+def viz(column_name, data, jupyter = False):
     """Creates visualization of the top 10 artists on spotify"""
     value_counts = data[column_name].value_counts()
     top_10_value_counts = value_counts.head(10)
@@ -46,6 +46,7 @@ def viz(column_name, data):
     fig = plt.ylabel("Number of top tracks")
     fig = plt.title("Which artists had the most top tracks in the last few years?")
     #plt.show()
-    plt.savefig("output/visualization.png")
+    if not jupyter:
+        plt.savefig("output/visualization.png")
     return fig
 
