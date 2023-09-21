@@ -8,7 +8,7 @@ Made by: [Faraz Jawed](https://github.com/farazjawedd)
 [![Test](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/test.yml/badge.svg)](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/test.yml)
 
 ---------
-Link to youtube video explaining this: https://youtu.be/ihDVkRadaK0
+Link to youtube [video](https://youtu.be/ihDVkRadaK0) explaining this
 ---------
 # Summary of the project: 
 The workflow involes linting, formatting, testing and downloading all the dependencies required for the project. It's automatically handled by github actions whenever there is a new commit pushed to the repository, to make sure everything works. The badges at the top show the status of the project. 
