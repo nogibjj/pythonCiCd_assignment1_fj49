@@ -11,7 +11,7 @@ format:
 	nbqa black src/*.ipynb
 
 lint:
-	nbqa ruff src/*.ipynb
-	ruff check src/*.py
+	nbqa ruff sorc/*.ipynb
+	ruff check sorc/*.py
 
 all: install lint format test 
