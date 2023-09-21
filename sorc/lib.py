@@ -46,6 +46,6 @@ def viz(column_name, data):
     fig = plt.ylabel("Number of top tracks")
     fig = plt.title("Which artists had the most top tracks in the last few years?")
     #plt.show()
-    plt.savefig("/workspaces/pythonCiCd_assignment1_fj49/output/visualization.png")
+    plt.savefig("output/visualization.png")
     return fig
 
