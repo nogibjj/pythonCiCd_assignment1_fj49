@@ -7,8 +7,8 @@ test:
 	python -m pytest --nbval sorc/*.ipynb
 
 format:	
-	black src/*.py
-	nbqa black src/*.ipynb
+	black sorc/*.py
+	nbqa black sorc/*.ipynb
 
 lint:
 	nbqa ruff sorc/*.ipynb
