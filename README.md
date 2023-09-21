@@ -1,7 +1,10 @@
 # python-template-ids706
 
+[![Format](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/format.yml/badge.svg)](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/format.yml)
+[![Lint](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/lint.yml/badge.svg)](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/lint.yml)
+[![OnInstall](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/install.yml/badge.svg)](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/install.yml)
+[![Test](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/test.yml/badge.svg)](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/test.yml)
 
-[![CI](https://github.com/farazjawedd/python-template-ids706/actions/workflows/cicd.yml/badge.svg)](https://github.com/farazjawedd/python-template-ids706/actions/workflows/cicd.yml)
 
 A python template with CI/CD setup to automate my workflow for other assignments in the course. Feel free to use it!
 
