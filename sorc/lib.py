@@ -38,7 +38,6 @@ def std(column_name, data):
 def viz(column_name, data):
     """Creates visualization of the top 10 artists on spotify"""
     value_counts = data[column_name].value_counts()
-    print (value_counts)
     top_10_value_counts = value_counts.head(10)
     fig = plt.figure(figsize=(10, 6))
     fig = plt.bar(top_10_value_counts.index, top_10_value_counts.values)
