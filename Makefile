@@ -3,7 +3,7 @@ install:
 		pip install -r requirements.txt
 
 test:
-	python -m pytest -vv --cov=sorc.lib.py sorc/test_main*.py
+	python -m pytest -vv --cov=sorc.lib sorc/test_main*.py
 	python -m pytest --nbval sorc/*.ipynb
 
 format:	
