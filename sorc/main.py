@@ -10,5 +10,4 @@ median = lib.median("duration_ms", spotify)
 mode = lib.mode("duration_ms", spotify)
 std = lib.std("duration_ms", spotify)
 viz = lib.viz("artist_name", spotify) # creates visualization
-
-print (mode)
+lib.summary_report("duration_ms", spotify)

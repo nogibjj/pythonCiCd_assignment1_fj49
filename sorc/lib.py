@@ -50,3 +50,11 @@ def viz(column_name, data, jupyter = False):
         plt.savefig("output/visualization.png")
     return fig
 
+def summary_report(column_name,data):
+    '''generates a report'''
+    summary_report_path = r'output/generated_report.md'
+    with open(summary_report_path, "w", encoding="utf-8") as report:
+        report.write(f'Mean: {mean(column_name, data)} \n \n \n')
+        report.write(f'Median: {median(column_name, data)} \n \n \n')
+        report.write(f'Standard Deviation: {std(column_name, data)} \n \n \n')
+
