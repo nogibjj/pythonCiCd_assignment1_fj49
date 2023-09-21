@@ -1,4 +1,6 @@
-# Individual Assignment 1: Continuous integration and deployment of python descriptive statistics using pandas [Making use of github actinos]
+# Individual Assignment 1: Continuous integration and deployment of python descriptive statistics using pandas [Making use of github actions]
+
+Made by: [Faraz Jawed](https://github.com/farazjawedd)
 
 [![Format](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/format.yml/badge.svg)](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/format.yml)
 [![Lint](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/lint.yml/badge.svg)](https://github.com/nogibjj/pythonCiCd_assignment1_fj49/actions/workflows/lint.yml)
