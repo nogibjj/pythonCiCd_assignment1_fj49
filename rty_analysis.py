@@ -5,6 +5,7 @@ import numpy as np
 from scipy import stats
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
 
 
 # Load and prepare data
@@ -112,6 +113,12 @@ if st.button("Update Analysis"):
         plot_df["Returns_2"] = plot_df["RTY_Returns_2"]
 
     plot_df["DaysAgo"] = (plot_df.index.max() - plot_df.index).days
+
+    # Impute missing values
+    imputer = SimpleImputer(strategy="mean")
+    plot_df[["Returns_1", "Returns_2"]] = imputer.fit_transform(
+        plot_df[["Returns_1", "Returns_2"]]
+    )
 
     # K-means Clustering
     scaler = StandardScaler()
