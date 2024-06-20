@@ -6,6 +6,23 @@ from scipy import stats
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
+from plotly.subplots import make_subplots
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
+
+st.markdown(
+    """
+    <style>
+    .reportview-container .main .block-container {
+        padding-left: -10rem;
+        padding-right: 0rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # Load and prepare data
@@ -32,6 +49,14 @@ def load_data(file):
 rty_df = load_data("rty.csv")
 spx_df = load_data("spx.csv")
 
+volume_df = load_data("volume_RTY_2022.csv")
+
+volume_df["NormalizedVolume"] = volume_df["volume"] / volume_df["volume"].sum()
+
+# Merge return and volume data
+merged_df = pd.merge(rty_df, volume_df, on="DateTime", how="left")
+merged_df["NormalizedVolume"].fillna(0, inplace=True)
+
 
 def calculate_returns(df, start_time, end_time):
     mask = (df["DateTime"].dt.time >= start_time) & (df["DateTime"].dt.time < end_time)
@@ -40,6 +65,313 @@ def calculate_returns(df, start_time, end_time):
 
 # Streamlit app
 st.title("RTY Futures Returns Analysis")
+
+############
+
+# Comparisons for specific time intervals
+intervals = ["1 min", "5 min", "10 min", "30 min", "1 hour"]
+base_time = pd.to_datetime("09:30").time()
+base_date = pd.to_datetime("2000-01-01")  # Dummy date for combining with base_time
+
+for interval in intervals:
+    st.subheader(f"Comparison for {interval} Interval")
+
+    if interval == "1 min":
+        delta = pd.Timedelta(minutes=1)
+    elif interval == "5 min":
+        delta = pd.Timedelta(minutes=5)
+    elif interval == "10 min":
+        delta = pd.Timedelta(minutes=10)
+    elif interval == "30 min":
+        delta = pd.Timedelta(minutes=30)
+    else:  # '1 hour'
+        delta = pd.Timedelta(hours=1)
+
+    forward_time = (
+        pd.to_datetime(base_date.date().isoformat() + " " + base_time.isoformat())
+        + delta
+    ).time()
+    backward_time = (
+        pd.to_datetime(base_date.date().isoformat() + " " + base_time.isoformat())
+        - delta
+    ).time()
+
+    spy_forward_returns = calculate_returns(spx_df, base_time, forward_time)
+    spy_backward_returns = calculate_returns(spx_df, backward_time, base_time)
+
+    rty_forward_returns = calculate_returns(rty_df, base_time, forward_time)
+    rty_backward_returns = calculate_returns(rty_df, backward_time, base_time)
+
+    diff_forward_returns = rty_forward_returns - spy_forward_returns
+    diff_backward_returns = rty_backward_returns - spy_backward_returns
+
+    # Create a DataFrame for plotting
+    plot_data = {
+        "SPY": pd.DataFrame(
+            {"Forward": spy_forward_returns, "Backward": spy_backward_returns}
+        ),
+        "RTY": pd.DataFrame(
+            {"Forward": rty_forward_returns, "Backward": rty_backward_returns}
+        ),
+        "Diff": pd.DataFrame(
+            {"Forward": diff_forward_returns, "Backward": diff_backward_returns}
+        ),
+    }
+
+    # Add a dropdown to select the returns to display
+    selected_returns = st.selectbox(
+        "Select Returns", options=["SPY", "RTY", "Diff"], key=f"dropdown_{interval}"
+    )
+
+    # # Create subplots side by side
+    # fig = make_subplots(rows=1, cols=2, subplot_titles=("Scatter Plot", "Line Graph"))
+
+    # # Add trace for the scatter plot
+    # fig.add_trace(
+    #     go.Scatter(
+    #         x=plot_data[selected_returns]["Backward"],
+    #         y=plot_data[selected_returns]["Forward"],
+    #         mode="markers",
+    #         marker=dict(
+    #             size=10,
+    #             color=plot_data[selected_returns]["Forward"].index.map(
+    #                 lambda x: (
+    #                     x - plot_data[selected_returns]["Forward"].index.max()
+    #                 ).days
+    #             ),
+    #             colorscale="Viridis",
+    #             colorbar=dict(title="Days Ago"),
+    #         ),
+    #         hovertemplate="Backward Return: %{x:.4f}<br>Forward Return: %{y:.4f}<extra></extra>",
+    #     ),
+    #     row=1,
+    #     col=1,
+    # )
+
+    # # Add trace for the line graph
+    # fig.add_trace(
+    #     go.Scatter(
+    #         x=plot_data[selected_returns]["Forward"].index,
+    #         y=plot_data[selected_returns]["Forward"],
+    #         mode="lines",
+    #         name="Forward Returns",
+    #     ),
+    #     row=1,
+    #     col=2,
+    # )
+
+    # fig.add_trace(
+    #     go.Scatter(
+    #         x=plot_data[selected_returns]["Backward"].index,
+    #         y=plot_data[selected_returns]["Backward"],
+    #         mode="lines",
+    #         name="Backward Returns",
+    #     ),
+    #     row=1,
+    #     col=2,
+    # )
+
+    # fig.update_layout(
+    #     title=f"{selected_returns} Returns Comparison for {interval} Interval",
+    #     height=600,
+    #     width=1400,
+    #     bargap=0.1,
+    #     hovermode="closest",
+    #     legend=dict(
+    #         x=0.05,
+    #         y=0.95,
+    #         bgcolor="rgba(255, 255, 255, 0.8)",
+    #         bordercolor="rgba(0, 0, 0, 0.8)",
+    #         borderwidth=1,
+    #     ),
+    #     margin=dict(l=-100),  # Adjust the left margin
+    # )
+
+    fig = make_subplots(
+        rows=1,
+        cols=2,
+        subplot_titles=(
+            "Average Return across the time horizon",
+            "Return Comparision before and market open",
+        ),
+        horizontal_spacing=0.05,
+    )
+
+    # Add trace for the scatter plot
+    fig.add_trace(
+        go.Scatter(
+            x=plot_data[selected_returns]["Backward"],
+            y=plot_data[selected_returns]["Forward"],
+            mode="markers",
+            marker=dict(
+                size=10,
+                color=plot_data[selected_returns]["Forward"].index.map(
+                    lambda x: (
+                        x - plot_data[selected_returns]["Forward"].index.max()
+                    ).days
+                ),
+                colorscale="Viridis",
+                colorbar=dict(title="Days Ago"),
+            ),
+            hovertemplate="Backward Return: %{x:.5f}<br>Forward Return: %{y:.5f}<extra></extra>",
+        ),
+        row=1,
+        col=2,
+    )
+
+    # Add trace for the line graph
+    fig.add_trace(
+        go.Scatter(
+            x=plot_data[selected_returns]["Forward"].index,
+            y=plot_data[selected_returns]["Forward"],
+            mode="lines",
+            name="Forward Returns",
+        ),
+        row=1,
+        col=1,
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=plot_data[selected_returns]["Backward"].index,
+            y=plot_data[selected_returns]["Backward"],
+            mode="lines",
+            name="Backward Returns",
+        ),
+        row=1,
+        col=1,
+    )
+
+    fig.update_layout(
+        title=f"{selected_returns} Returns Comparison for {interval} Interval",
+        height=600,
+        width=2400,
+        bargap=0.1,
+        hovermode="closest",
+        legend=dict(
+            x=0.05,
+            y=0.95,
+            bgcolor="rgba(255, 255, 255, 0.8)",
+            bordercolor="rgba(0, 0, 0, 0.8)",
+            borderwidth=1,
+        ),
+        xaxis1=dict(domain=[0.0, 0.45]),  # Adjust the domain for the scatter plot
+        xaxis2=dict(domain=[0.55, 1.0]),  # Adjust the domain for the line plot
+        margin=dict(l=0),
+    )
+
+    fig.update_xaxes(title_text="Date", row=1, col=1)
+    fig.update_yaxes(title_text="Returns", row=1, col=1)
+    fig.update_xaxes(title_text="Before Market Open", row=1, col=2)
+    fig.update_yaxes(title_text="After Market Open", row=1, col=2)
+
+    st.plotly_chart(fig)
+
+    # Display statistics
+    st.write("Statistics:")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write(
+            f"{selected_returns} Forward Avg Return: {plot_data[selected_returns]['Forward'].mean():.5f}"
+        )
+        st.write(
+            f"{selected_returns} Forward Std Dev: {plot_data[selected_returns]['Forward'].std():.5f}"
+        )
+
+    with col2:
+        st.write(
+            f"{selected_returns} Backward Avg Return: {plot_data[selected_returns]['Backward'].mean():.5f}"
+        )
+        st.write(
+            f"{selected_returns} Backward Std Dev: {plot_data[selected_returns]['Backward'].std():.5f}"
+        )
+
+    st.write("---")
+    ##############################
+
+# 30-minute interval returns table
+st.subheader("30-Minute Interval Returns")
+
+# Create time intervals
+start_time = pd.to_datetime("09:00").time()
+end_time = pd.to_datetime("16:30").time()
+freq = "30min"
+
+# Generate time intervals
+base_date = pd.to_datetime("2000-01-01")  # Dummy date for combining with time
+intervals = pd.date_range(
+    start=base_date.replace(hour=start_time.hour, minute=start_time.minute),
+    end=base_date.replace(hour=end_time.hour, minute=end_time.minute),
+    freq=freq,
+).time
+
+# Get the number of unique dates in the data
+num_days_data = rty_df["Date"].nunique()
+
+# Add a slider to select the number of days
+num_days = st.slider(
+    "Select the number of days",
+    min_value=1,
+    max_value=num_days_data,
+    value=num_days_data,
+    step=1,
+)
+
+# Filter the data based on the selected number of days
+start_date = rty_df["Date"].max() - pd.Timedelta(days=num_days - 1)
+filtered_rty_df = rty_df[rty_df["Date"] >= start_date]
+filtered_spx_df = spx_df[spx_df["Date"] >= start_date]
+
+# Calculate returns for each interval
+interval_returns = []
+
+for i in range(len(intervals) - 1):
+    start = intervals[i]
+    end = intervals[i + 1]
+
+    spy_returns = calculate_returns(filtered_spx_df, start, end)
+    rty_returns = calculate_returns(filtered_rty_df, start, end)
+    diff_returns = rty_returns - spy_returns
+
+    interval_returns.append(
+        {
+            "Interval": f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')}",
+            "SPX Returns": spy_returns.mean(),
+            "RTY Returns": rty_returns.mean(),
+            "RTY - SPX Returns": diff_returns.mean(),
+        }
+    )
+
+# Create a DataFrame from interval_returns
+returns_df = pd.DataFrame(interval_returns)
+
+# Format the returns to 5 decimal points
+returns_df = returns_df.applymap(
+    lambda x: f"{x:.5f}" if isinstance(x, (int, float)) else x
+)
+
+# Display the table
+st.table(returns_df)
+
+### fix this, not working bec of some odd reason
+# def highlight_max(val):
+#     try:
+#         if float(val) == filtered_returns_df.max().max():
+#             return "background-color: yellow"
+#         else:
+#             return ""
+#     except ValueError:
+#         return ""
+
+
+# styled_returns_df = filtered_returns_df.style.applymap(highlight_max)
+
+# Display the table with conditional formatting
+# st.table(filtered_returns_df)
+
+
+###############################
 
 # Normalization toggle
 normalize_returns = st.checkbox("Normalize Returns by SPX", value=True)
@@ -406,3 +738,262 @@ if st.button("Update Analysis"):
         st.write(
             "The cumulative returns graph shows the growth of an initial investment of 1 unit over time, assuming the returns are reinvested. A value of 1.02 means that the investment has grown by 2% over the period."
         )
+
+    ######### VOLUME ############
+    merged_df["Date"] = merged_df["Date_x"]
+    returns_1 = calculate_returns(merged_df, time1_start, time1_end)
+    returns_2 = calculate_returns(merged_df, time2_start, time2_end)
+
+    plot_df = pd.DataFrame({"Returns_1": returns_1, "Returns_2": returns_2})
+    plot_df["DaysAgo"] = (plot_df.index.max() - plot_df.index).days
+
+    # Volume analysis
+    # Volume and returns analysis
+    # Volume and returns analysis
+    # Volume and returns analysis
+    volume_and_returns_data = merged_df[
+        (merged_df["DateTime"].dt.time >= time1_start)
+        & (merged_df["DateTime"].dt.time < time2_end)
+    ]
+    volume_and_returns_data = (
+        volume_and_returns_data.groupby("Date")
+        .agg({"volume": "sum", "LogReturn": "sum"})
+        .reset_index()
+    )
+
+    fig_volume_returns = make_subplots(specs=[[{"secondary_y": True}]])
+
+    fig_volume_returns.add_trace(
+        go.Scatter(
+            x=volume_and_returns_data["Date"],
+            y=volume_and_returns_data["volume"],
+            mode="lines",
+            name="Volume",
+        ),
+        secondary_y=False,
+    )
+
+    fig_volume_returns.add_trace(
+        go.Scatter(
+            x=volume_and_returns_data["Date"],
+            y=volume_and_returns_data["LogReturn"],
+            mode="lines",
+            name="Returns",
+        ),
+        secondary_y=True,
+    )
+
+    fig_volume_returns.update_layout(
+        title=f"Volume and Returns: {time1_start.strftime('%H:%M')}-{time2_end.strftime('%H:%M')}",
+        xaxis_title="Date",
+        yaxis_title="Volume",
+        yaxis2_title="Returns",
+    )
+
+    st.plotly_chart(fig_volume_returns)
+
+    ######### VOLUME ############
+    merged_df["Date"] = merged_df["Date_x"]
+    returns_1 = calculate_returns(merged_df, time1_start, time1_end)
+    returns_2 = calculate_returns(merged_df, time2_start, time2_end)
+
+    plot_df = pd.DataFrame({"Returns_1": returns_1, "Returns_2": returns_2})
+    plot_df["DaysAgo"] = (plot_df.index.max() - plot_df.index).days
+
+    # Volume and returns analysis
+    volume_and_returns_data = merged_df[
+        (merged_df["DateTime"].dt.time >= time1_start)
+        & (merged_df["DateTime"].dt.time < time2_end)
+    ]
+    volume_and_returns_data = (
+        volume_and_returns_data.groupby("Date")
+        .agg({"volume": "sum", "LogReturn": "sum"})
+        .reset_index()
+    )
+
+    fig_volume_returns = make_subplots(specs=[[{"secondary_y": True}]])
+
+    fig_volume_returns.add_trace(
+        go.Scatter(
+            x=volume_and_returns_data["Date"],
+            y=volume_and_returns_data["volume"],
+            mode="lines",
+            name="Volume",
+        ),
+        secondary_y=False,
+    )
+
+    fig_volume_returns.add_trace(
+        go.Scatter(
+            x=volume_and_returns_data["Date"],
+            y=volume_and_returns_data["LogReturn"],
+            mode="lines",
+            name="Returns",
+        ),
+        secondary_y=True,
+    )
+
+    fig_volume_returns.update_layout(
+        title=f"Volume and Returns: {time1_start.strftime('%H:%M')}-{time2_end.strftime('%H:%M')}",
+        xaxis_title="Date",
+        yaxis_title="Volume",
+        yaxis2_title="Returns",
+    )
+
+    st.plotly_chart(fig_volume_returns)
+
+    # Scatter plot of volume vs returns
+    fig_volume_returns_scatter = go.Figure()
+
+    fig_volume_returns_scatter.add_trace(
+        go.Scatter(
+            x=volume_and_returns_data["volume"],
+            y=volume_and_returns_data["LogReturn"],
+            mode="markers",
+            marker=dict(
+                size=10,
+                color=volume_and_returns_data["Date"].map(
+                    lambda x: (x - volume_and_returns_data["Date"].max()).days
+                ),
+                colorscale="Viridis",
+                colorbar=dict(title="Days Ago"),
+            ),
+            hovertemplate="Volume: %{x}<br>Returns: %{y:.4f}<extra></extra>",
+        )
+    )
+
+    fig_volume_returns_scatter.update_layout(
+        title=f"Volume vs Returns: {time1_start.strftime('%H:%M')}-{time2_end.strftime('%H:%M')}",
+        xaxis_title="Volume",
+        yaxis_title="Returns",
+    )
+
+    st.plotly_chart(fig_volume_returns_scatter)
+
+    # Moving average of volume
+    volume_data = merged_df[
+        (merged_df["DateTime"].dt.time >= time1_start)
+        & (merged_df["DateTime"].dt.time < time2_end)
+    ]
+    volume_data = volume_data.groupby("Date").agg({"volume": "sum"}).reset_index()
+
+    volume_data["VolumeMA10"] = volume_data["volume"].rolling(window=10).mean()
+    volume_data["VolumeMA20"] = volume_data["volume"].rolling(window=20).mean()
+
+    fig_volume_ma = go.Figure()
+
+    fig_volume_ma.add_trace(
+        go.Scatter(
+            x=volume_data["Date"], y=volume_data["volume"], mode="lines", name="Volume"
+        )
+    )
+    fig_volume_ma.add_trace(
+        go.Scatter(
+            x=volume_data["Date"],
+            y=volume_data["VolumeMA10"],
+            mode="lines",
+            name="10-Day MA",
+        )
+    )
+    fig_volume_ma.add_trace(
+        go.Scatter(
+            x=volume_data["Date"],
+            y=volume_data["VolumeMA20"],
+            mode="lines",
+            name="20-Day MA",
+        )
+    )
+
+    fig_volume_ma.update_layout(
+        title=f"Volume and Moving Averages: {time1_start.strftime('%H:%M')}-{time2_end.strftime('%H:%M')}",
+        xaxis_title="Date",
+        yaxis_title="Volume",
+    )
+
+    st.plotly_chart(fig_volume_ma)
+
+    # Volume distribution
+    fig_volume_dist = go.Figure()
+
+    fig_volume_dist.add_trace(
+        go.Histogram(x=volume_data["volume"], nbinsx=50, name="Volume Distribution")
+    )
+
+    fig_volume_dist.update_layout(
+        title=f"Volume Distribution: {time1_start.strftime('%H:%M')}-{time2_end.strftime('%H:%M')}",
+        xaxis_title="Volume",
+        yaxis_title="Frequency",
+    )
+
+    st.plotly_chart(fig_volume_dist)
+
+    # # Volume analysis
+    # volume_data = merged_df[
+    #     (merged_df["DateTime"].dt.time >= time1_start)
+    #     & (merged_df["DateTime"].dt.time < time2_end)
+    # ]
+    # volume_data = (
+    #     volume_data.groupby("Date")
+    #     .agg({"NormalizedVolume": "sum", "tradeCount": "sum"})
+    #     .reset_index()
+    # )
+
+    # fig_volume = go.Figure()
+    # fig_volume.add_trace(
+    #     go.Scatter(
+    #         x=volume_data["Date"],
+    #         y=volume_data["NormalizedVolume"],
+    #         mode="lines",
+    #         name="Normalized Volume",
+    #     )
+    # )
+    # fig_volume.add_trace(
+    #     go.Scatter(
+    #         x=volume_data["Date"],
+    #         y=volume_data["tradeCount"],
+    #         mode="lines",
+    #         name="Trade Count",
+    #         yaxis="y2",
+    #     )
+    # )
+    # fig_volume.update_layout(
+    #     title=f"Volume and Trade Count: {time1_start.strftime('%H:%M')}-{time2_end.strftime('%H:%M')}",
+    #     xaxis_title="Date",
+    #     yaxis_title="Normalized Volume",
+    # )
+
+    # fig_volume.update_yaxes(title_text="Normalized Volume", secondary_y=False)
+    # fig_volume.update_yaxes(title_text="Trade Count", secondary_y=True)
+
+    # st.plotly_chart(fig_volume)
+
+    # Predictive model
+    features = ["NormalizedVolume", "tradeCount"]
+    target = "LogReturn"
+
+    model_data = merged_df[
+        (merged_df["DateTime"].dt.time >= time1_start)
+        & (merged_df["DateTime"].dt.time < time2_end)
+    ]
+    model_data = model_data[features + [target]].dropna()
+
+    X = model_data[features]
+    y = model_data[target]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_test)
+
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+
+    st.subheader("Predictive Model")
+    st.write("Features used: Normalized Volume, Trade Count")
+    st.write("Target variable: Log Return")
+    st.write(f"Mean Squared Error: {mse:.4f}")
+    st.write(f"R-squared: {r2:.4f}")
