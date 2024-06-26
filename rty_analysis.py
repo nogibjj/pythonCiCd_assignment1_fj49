@@ -10,7 +10,7 @@ from plotly.subplots import make_subplots
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
-
+from scipy.stats import ttest_ind
 
 st.markdown(
     """
@@ -48,7 +48,6 @@ def load_data(file):
 
 rty_df = load_data("rty.csv")
 spx_df = load_data("spx.csv")
-
 volume_df = load_data("volume_RTY_2022.csv")
 
 volume_df["NormalizedVolume"] = volume_df["volume"] / volume_df["volume"].sum()
@@ -379,6 +378,10 @@ normalize_returns = st.checkbox("Normalize Returns by SPX", value=True)
 # Cumulative returns toggle
 show_cumulative_returns = st.checkbox("Show Cumulative Returns", value=True)
 
+show_percentage_returns = st.checkbox("Show Percentage Returns", value=False)
+
+st.subheader("Analysis Settings:")
+
 # Time slot inputs
 col1, col2 = st.columns(2)
 with col1:
@@ -444,6 +447,10 @@ if st.button("Update Analysis"):
         plot_df["Returns_1"] = plot_df["RTY_Returns_1"]
         plot_df["Returns_2"] = plot_df["RTY_Returns_2"]
 
+    if show_percentage_returns:
+        plot_df["Returns_1"] = (np.exp(plot_df["Returns_1"]) - 1) * 100
+        plot_df["Returns_2"] = (np.exp(plot_df["Returns_2"]) - 1) * 100
+
     plot_df["DaysAgo"] = (plot_df.index.max() - plot_df.index).days
 
     # Impute missing values
@@ -462,6 +469,10 @@ if st.button("Update Analysis"):
 
     # Scatter plot
     fig1 = go.Figure()
+
+    fig1.add_hline(y=0, line_dash="dash", line_color="black")
+    fig1.add_vline(x=0, line_dash="dash", line_color="black")
+
     for i in range(num_clusters):
         cluster_df = plot_df[plot_df["Cluster"] == i]
         fig1.add_trace(
@@ -515,10 +526,11 @@ if st.button("Update Analysis"):
     returns_title = (
         "Normalized RTY Futures Returns" if normalize_returns else "RTY Futures Returns"
     )
+    returns_unit = "%" if show_percentage_returns else ""
     fig1.update_layout(
         title=f'{returns_title}: {time1_start.strftime("%H:%M")}-{time1_end.strftime("%H:%M")} vs {time2_start.strftime("%H:%M")}-{time2_end.strftime("%H:%M")}',
-        xaxis_title=f'Returns {time1_start.strftime("%H:%M")}-{time1_end.strftime("%H:%M")}',
-        yaxis_title=f'Returns {time2_start.strftime("%H:%M")}-{time2_end.strftime("%H:%M")}',
+        xaxis_title=f'Returns {time1_start.strftime("%H:%M")}-{time1_end.strftime("%H:%M")} {returns_unit}',
+        yaxis_title=f'Returns {time2_start.strftime("%H:%M")}-{time2_end.strftime("%H:%M")} {returns_unit}',
         legend=dict(x=0, y=1, orientation="h"),
     )
 
@@ -597,33 +609,60 @@ if st.button("Update Analysis"):
 
     st.plotly_chart(fig2)
 
-    # Simplified Heatmap of average returns by hour
-    rty_df["Hour"] = rty_df["DateTime"].dt.hour
-    spx_df["Hour"] = spx_df["DateTime"].dt.hour
+    # Heatmap of average returns by day of week and hour
+    st.subheader("Average Returns by Day of Week and Hour")
 
-    rty_heatmap_data = rty_df.groupby("Hour")["LogReturn"].mean()
+    rty_df["DayOfWeek"] = rty_df["DateTime"].dt.dayofweek
+    rty_df["Hour"] = rty_df["DateTime"].dt.hour
 
     if normalize_returns:
-        spx_heatmap_data = spx_df.groupby("Hour")["LogReturn"].mean()
-        heatmap_data = rty_heatmap_data - spx_heatmap_data
-        heatmap_title = "Average Normalized Returns by Hour"
-    else:
-        heatmap_data = rty_heatmap_data
-        heatmap_title = "Average Returns by Hour"
+        spx_df["DayOfWeek"] = spx_df["DateTime"].dt.dayofweek
+        spx_df["Hour"] = spx_df["DateTime"].dt.hour
 
-    fig3 = go.Figure(
+        rty_heatmap_data = (
+            rty_df.groupby(["DayOfWeek", "Hour"])["LogReturn"].mean().unstack()
+        )
+        spx_heatmap_data = (
+            spx_df.groupby(["DayOfWeek", "Hour"])["LogReturn"].mean().unstack()
+        )
+        heatmap_data = rty_heatmap_data - spx_heatmap_data
+        heatmap_title = "Average Normalized Returns by Day of Week and Hour"
+    else:
+        heatmap_data = (
+            rty_df.groupby(["DayOfWeek", "Hour"])["LogReturn"].mean().unstack()
+        )
+        heatmap_title = "Average Returns by Day of Week and Hour"
+
+    # Convert to percentage if checkbox is selected
+    if show_percentage_returns:
+        heatmap_data = (np.exp(heatmap_data) - 1) * 100
+        value_format = ".2f"
+        colorbar_title = "Average Return (%)"
+    else:
+        value_format = ".4f"
+        colorbar_title = "Average Return"
+
+    fig_heatmap = go.Figure(
         data=go.Heatmap(
-            z=[heatmap_data],
-            x=heatmap_data.index,
-            y=["Average Return"],
-            colorscale="Viridis",
-            colorbar=dict(title="Average Return"),
+            z=heatmap_data.values,
+            x=heatmap_data.columns,
+            y=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            colorscale="RdBu",
+            zmid=0,
+            text=heatmap_data.values,
+            texttemplate="%{text:" + value_format + "}",
+            colorbar=dict(title=colorbar_title),
         )
     )
 
-    fig3.update_layout(title=heatmap_title, xaxis_title="Hour of Day")
+    fig_heatmap.update_layout(
+        title=heatmap_title,
+        xaxis_title="Hour of Day",
+        yaxis_title="Day of Week",
+        xaxis=dict(tickmode="linear", tick0=0, dtick=1),
+    )
 
-    st.plotly_chart(fig3)
+    st.plotly_chart(fig_heatmap)
 
     # Volatility Analysis
     volatility_1 = plot_df["Returns_1"].std() * np.sqrt(252)  # Annualized volatility
@@ -968,32 +1007,225 @@ if st.button("Update Analysis"):
     # st.plotly_chart(fig_volume)
 
     # Predictive model
-    features = ["NormalizedVolume", "tradeCount"]
-    target = "LogReturn"
+# Add this import at the top of your script
 
-    model_data = merged_df[
-        (merged_df["DateTime"].dt.time >= time1_start)
-        & (merged_df["DateTime"].dt.time < time2_end)
+# Add this section after the "Data Visualization" section and before the "Time Series Decomposition" section
+
+#####
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from scipy.stats import ttest_ind
+
+st.header("3. Conditional Returns Analysis")
+
+# Date range selection
+col1, col2 = st.columns(2)
+with col1:
+    start_date = st.date_input("Start Date", value=pd.to_datetime(rty_df["Date"].min()))
+with col2:
+    end_date = st.date_input("End Date", value=pd.to_datetime(rty_df["Date"].max()))
+
+# Filter data based on selected date range
+rty_df_filtered = rty_df[
+    (rty_df["Date"].dt.date >= start_date) & (rty_df["Date"].dt.date <= end_date)
+]
+
+
+def calculate_returns(df, start_time, end_time):
+    mask = (df["DateTime"].dt.time >= start_time) & (df["DateTime"].dt.time < end_time)
+    return df[mask].groupby(df["DateTime"].dt.date)["LogReturn"].sum()
+
+
+def create_conditional_returns_heatmap(
+    before_market_returns, after_market_returns, threshold, title
+):
+    before_intervals = ["1m", "5m", "15m", "30m", "1h"]
+    after_intervals = ["1m", "5m", "15m", "30m", "1h"]
+    data = []
+
+    for before_interval in before_intervals:
+        row = []
+        for after_interval in after_intervals:
+            mask = (before_market_returns[before_interval] >= threshold[0]) & (
+                before_market_returns[before_interval] < threshold[1]
+            )
+            returns = after_market_returns[after_interval][mask].mean()
+            row.append(returns)
+        data.append(row)
+
+    colors = [
+        (0, "rgb(165,0,38)"),  # Dark red for most negative
+        (0.25, "rgb(215,48,39)"),  # Red
+        (0.45, "rgb(244,109,67)"),  # Light red
+        (0.5, "rgb(255,255,255)"),  # White for zero
+        (0.55, "rgb(166,217,106)"),  # Light green
+        (0.75, "rgb(26,152,80)"),  # Green
+        (1, "rgb(0,104,55)"),  # Dark green for most positive
     ]
-    model_data = model_data[features + [target]].dropna()
 
-    X = model_data[features]
-    y = model_data[target]
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=data,
+            x=after_intervals,
+            y=before_intervals,
+            colorscale=colors,
+            zmid=0,
+            text=[[f"{val:.2%}" for val in row] for row in data],
+            texttemplate="%{text}",
+            textfont={"size": 10},
+            hoverongaps=False,
+        )
     )
 
-    model = LinearRegression()
-    model.fit(X_train, y_train)
+    fig.update_layout(
+        title=title, xaxis_title="After Market Open", yaxis_title="Before Market Open"
+    )
 
-    y_pred = model.predict(X_test)
+    return fig
 
-    mse = mean_squared_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
 
-    st.subheader("Predictive Model")
-    st.write("Features used: Normalized Volume, Trade Count")
-    st.write("Target variable: Log Return")
-    st.write(f"Mean Squared Error: {mse:.4f}")
-    st.write(f"R-squared: {r2:.4f}")
+# Calculate returns for different intervals
+intervals = {
+    "1m": (pd.Timestamp("09:29").time(), pd.Timestamp("09:30").time()),
+    "5m": (pd.Timestamp("09:25").time(), pd.Timestamp("09:30").time()),
+    "15m": (pd.Timestamp("09:15").time(), pd.Timestamp("09:30").time()),
+    "30m": (pd.Timestamp("09:00").time(), pd.Timestamp("09:30").time()),
+    "1h": (pd.Timestamp("08:30").time(), pd.Timestamp("09:30").time()),
+}
+
+after_intervals = {
+    "1m": (pd.Timestamp("09:30").time(), pd.Timestamp("09:31").time()),
+    "5m": (pd.Timestamp("09:30").time(), pd.Timestamp("09:35").time()),
+    "15m": (pd.Timestamp("09:30").time(), pd.Timestamp("09:45").time()),
+    "30m": (pd.Timestamp("09:30").time(), pd.Timestamp("10:00").time()),
+    "1h": (pd.Timestamp("09:30").time(), pd.Timestamp("10:30").time()),
+}
+
+before_market_returns = {}
+after_market_returns = {}
+
+for interval, (start, end) in intervals.items():
+    before_market_returns[interval] = calculate_returns(rty_df_filtered, start, end)
+
+for interval, (start, end) in after_intervals.items():
+    after_market_returns[interval] = calculate_returns(rty_df_filtered, start, end)
+
+# Create dropdown options
+thresholds = [
+    (-np.inf, -0.003),
+    (-0.003, -0.002),
+    (-0.002, -0.001),
+    (-0.001, 0),
+    (0, 0.001),
+    (0.001, 0.002),
+    (0.002, 0.003),
+    (0.003, np.inf),
+]
+
+threshold_names = [
+    "Less than -0.3 bps",
+    "-0.3 to -0.2 bps",
+    "-0.2 to -0.1 bps",
+    "-0.1 to 0 bps",
+    "0 to +0.1 bps",
+    "+0.1 to +0.2 bps",
+    "+0.2 to +0.3 bps",
+    "More than +0.3 bps",
+]
+
+threshold_options = threshold_names + ["Negative", "Positive"]
+
+# Dropdown for selecting before-market return range
+selected_threshold = st.selectbox(
+    "Select Before-Market Return Range", threshold_options
+)
+
+# Create heatmap based on selection
+if selected_threshold in threshold_names:
+    threshold = thresholds[threshold_names.index(selected_threshold)]
+    title = f"Average Returns After Market Open (When Before Market Returns were {selected_threshold})"
+elif selected_threshold == "Negative":
+    threshold = (-np.inf, 0)
+    title = (
+        "Average Returns After Market Open (When Before Market Returns were Negative)"
+    )
+else:  # Positive
+    threshold = (0, np.inf)
+    title = (
+        "Average Returns After Market Open (When Before Market Returns were Positive)"
+    )
+
+fig = create_conditional_returns_heatmap(
+    before_market_returns, after_market_returns, threshold, title
+)
+st.plotly_chart(fig)
+
+# Statistical significance
+st.subheader("Statistical Significance")
+st.write(
+    "Performing t-tests to check if the differences in returns are statistically significant."
+)
+
+for before_interval in intervals:
+    for after_interval in after_intervals:
+        if selected_threshold in threshold_names:
+            index = threshold_names.index(selected_threshold)
+            if index < len(thresholds) - 1:
+                returns_1 = after_market_returns[after_interval][
+                    (before_market_returns[before_interval] >= thresholds[index][0])
+                    & (before_market_returns[before_interval] < thresholds[index][1])
+                ]
+                returns_2 = after_market_returns[after_interval][
+                    (before_market_returns[before_interval] >= thresholds[index + 1][0])
+                    & (
+                        before_market_returns[before_interval]
+                        < thresholds[index + 1][1]
+                    )
+                ]
+                compare_text = (
+                    f"Comparing {threshold_names[index]} vs {threshold_names[index+1]}"
+                )
+            else:
+                st.write("No comparison available for the highest threshold.")
+                continue
+        elif selected_threshold == "Negative":
+            returns_1 = after_market_returns[after_interval][
+                before_market_returns[before_interval] < 0
+            ]
+            returns_2 = after_market_returns[after_interval][
+                before_market_returns[before_interval] >= 0
+            ]
+            compare_text = "Comparing Negative vs Non-negative returns"
+        else:  # Positive
+            returns_1 = after_market_returns[after_interval][
+                before_market_returns[before_interval] <= 0
+            ]
+            returns_2 = after_market_returns[after_interval][
+                before_market_returns[before_interval] > 0
+            ]
+            compare_text = "Comparing Non-positive vs Positive returns"
+
+        if len(returns_1) > 0 and len(returns_2) > 0:
+            t_stat, p_value = ttest_ind(returns_1, returns_2)
+
+            st.write(f"Before: {before_interval}, After: {after_interval}")
+            st.write(compare_text)
+            st.write(f"T-statistic: {t_stat:.4f}")
+            st.write(f"P-value: {p_value:.4f}")
+            st.write(
+                "Statistically significant"
+                if p_value < 0.05
+                else "Not statistically significant"
+            )
+            st.write("---")
+
+st.write(
+    """
+This analysis shows how RTY futures perform after market open, conditional on their performance before market open.
+The heatmap displays the average returns for different time intervals based on the selected pre-market return range.
+The statistical significance tests help us understand if the differences between the selected range and adjacent ranges
+are meaningful or potentially due to random chance.
+"""
+)
