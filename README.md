@@ -64,3 +64,16 @@ def categorize_gbp_notional(value):
 
 # Apply the categorization to the carry_trades DataFrame
 carry_trades['gbp_notional_range'] = carry_trades['gbpNotional'].apply(categorize_gbp_notional)
+
+G7 = ['USD', 'EUR', 'JPY', 'GBP', 'CAD', 'CHF', 'AUD']
+G10 = G7 + ['NZD', 'SEK', 'NOK']
+
+def get_currency_group(sym, group):
+    base = sym[:3]
+    quote = sym[3:]
+    if group == 'G7':
+        return base in G7 and quote in G7
+    elif group == 'G10':
+        return base in G10 and quote in G10
+    else:
+        return True  # All currencies
