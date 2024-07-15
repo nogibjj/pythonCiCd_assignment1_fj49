@@ -47,3 +47,20 @@ You can find the template [here] (https://github.com/farazjawedd/python-template
 - The `.github/workflows/cicd.yml` file defines the Continuous Integration (CI) workflow using GitHub Actions.
 
 Explore the code and data to gain insights into the world of music with Spotify! 
+
+def categorize_gbp_notional(value):
+    if value < 1000000:
+        return '< 1M'
+    elif value < 2000000:
+        return '1M - 2M'
+    elif value < 5000000:
+        return '2M - 5M'
+    elif value < 10000000:
+        return '5M - 10M'
+    elif value < 20000000:
+        return '10M - 20M'
+    else:
+        return '> 20M'
+
+# Apply the categorization to the carry_trades DataFrame
+carry_trades['gbp_notional_range'] = carry_trades['gbpNotional'].apply(categorize_gbp_notional)
